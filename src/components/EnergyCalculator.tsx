@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Zap, Sun, DollarSign, Copy, MessageCircle, Check } from "lucide-react";
+import { Calendar, Zap, Sun, DollarSign, Copy, MessageCircle, Check, User, Phone, CreditCard, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,12 +11,17 @@ import { toast } from "sonner";
 interface CalculationResult {
   diasEstadia: number;
   consumoRede: number;
-  geracaoSolar: number;
+  geracaoMonitoramento: number;
+  injecaoRede: number;
+  autoconsumo: number;
   consumoTotal: number;
   valorCobrar: number;
   dataEntrada: string;
   dataSaida: string;
   tarifa: number;
+  nomeCliente: string;
+  telefoneCliente: string;
+  chavePix: string;
 }
 
 export function EnergyCalculator() {
@@ -26,13 +31,20 @@ export function EnergyCalculator() {
   const [codigo03Saida, setCodigo03Saida] = useState("");
   const [codigo103Entrada, setCodigo103Entrada] = useState("");
   const [codigo103Saida, setCodigo103Saida] = useState("");
+  const [geracaoMonitoramentoEntrada, setGeracaoMonitoramentoEntrada] = useState("");
+  const [geracaoMonitoramentoSaida, setGeracaoMonitoramentoSaida] = useState("");
   const [tarifa, setTarifa] = useState("1.10");
+  const [nomeCliente, setNomeCliente] = useState("");
+  const [telefoneCliente, setTelefoneCliente] = useState("");
+  const [chavePix, setChavePix] = useState("");
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [copied, setCopied] = useState(false);
 
   const handleCalculate = () => {
-    if (!dataEntrada || !dataSaida || !codigo03Entrada || !codigo03Saida || !codigo103Entrada || !codigo103Saida || !tarifa) {
-      toast.error("Preencha todos os campos");
+    if (!dataEntrada || !dataSaida || !codigo03Entrada || !codigo03Saida || 
+        !codigo103Entrada || !codigo103Saida || !geracaoMonitoramentoEntrada || 
+        !geracaoMonitoramentoSaida || !tarifa || !nomeCliente || !telefoneCliente) {
+      toast.error("Preencha todos os campos obrigatórios");
       return;
     }
 
@@ -45,44 +57,84 @@ export function EnergyCalculator() {
       return;
     }
 
+    // Consumo da rede (código 03)
     const consumoRede = parseFloat(codigo03Saida) - parseFloat(codigo03Entrada);
-    const geracaoSolar = parseFloat(codigo103Saida) - parseFloat(codigo103Entrada);
-    const consumoTotal = consumoRede + geracaoSolar;
+    
+    // Injeção na rede (código 103)
+    const injecaoRede = parseFloat(codigo103Saida) - parseFloat(codigo103Entrada);
+    
+    // Geração do monitoramento (quanto realmente gerou)
+    const geracaoMonitoramento = parseFloat(geracaoMonitoramentoSaida) - parseFloat(geracaoMonitoramentoEntrada);
+    
+    // Autoconsumo = Geração - Injeção (quanto gerou e usou na casa)
+    const autoconsumo = geracaoMonitoramento - injecaoRede;
+    
+    // Consumo total = Autoconsumo + Consumo da rede
+    const consumoTotal = autoconsumo + consumoRede;
+    
     const tarifaNum = parseFloat(tarifa.replace(",", "."));
     const valorCobrar = consumoTotal * tarifaNum;
 
-    if (consumoRede < 0 || geracaoSolar < 0) {
+    if (consumoRede < 0 || injecaoRede < 0 || geracaoMonitoramento < 0) {
       toast.error("As leituras de saída devem ser maiores que as de entrada");
+      return;
+    }
+
+    if (autoconsumo < 0) {
+      toast.error("A geração do monitoramento deve ser maior que a injeção na rede");
       return;
     }
 
     setResult({
       diasEstadia,
       consumoRede,
-      geracaoSolar,
+      geracaoMonitoramento,
+      injecaoRede,
+      autoconsumo,
       consumoTotal,
       valorCobrar,
       dataEntrada: format(entrada, "dd/MM/yyyy", { locale: ptBR }),
       dataSaida: format(saida, "dd/MM/yyyy", { locale: ptBR }),
       tarifa: tarifaNum,
+      nomeCliente,
+      telefoneCliente,
+      chavePix,
     });
   };
 
   const generateMessage = () => {
     if (!result) return "";
-    return `⚡ *Resumo de Energia - Estadia*
+    
+    let message = `⚡ *Olá ${result.nomeCliente}!*
 
-📅 Período: ${result.dataEntrada} a ${result.dataSaida}
-📆 Dias: ${result.diasEstadia} dias
+Segue o resumo do consumo de energia da sua estadia:
 
+📅 *Período:* ${result.dataEntrada} a ${result.dataSaida}
+📆 *Dias:* ${result.diasEstadia} dias
+
+☀️ Geração solar: ${result.geracaoMonitoramento.toFixed(1)} kWh
+🔄 Injetado na rede: ${result.injecaoRede.toFixed(1)} kWh
+🏠 Autoconsumo solar: ${result.autoconsumo.toFixed(1)} kWh
 ⚡ Consumo da rede: ${result.consumoRede.toFixed(1)} kWh
-☀️ Geração solar: ${result.geracaoSolar.toFixed(1)} kWh
+
 📊 *Consumo total: ${result.consumoTotal.toFixed(1)} kWh*
 
 💰 Tarifa: R$ ${result.tarifa.toFixed(2)}/kWh
-💵 *Valor da energia: R$ ${result.valorCobrar.toFixed(2)}*
+💵 *Valor da energia: R$ ${result.valorCobrar.toFixed(2)}*`;
 
+    if (result.chavePix) {
+      message += `
+
+💳 *Chave PIX para pagamento:*
+${result.chavePix}`;
+    }
+
+    message += `
+
+_Obrigado pela preferência!_
 _Calculado por Solo Energia_`;
+
+    return message;
   };
 
   const handleCopy = async () => {
@@ -94,8 +146,14 @@ _Calculado por Solo Energia_`;
   };
 
   const handleWhatsApp = () => {
+    if (!result) return;
+    
+    // Formata o telefone removendo caracteres não numéricos
+    const telefone = result.telefoneCliente.replace(/\D/g, "");
+    const telefoneFormatado = telefone.startsWith("55") ? telefone : `55${telefone}`;
+    
     const message = encodeURIComponent(generateMessage());
-    window.open(`https://wa.me/?text=${message}`, "_blank");
+    window.open(`https://wa.me/${telefoneFormatado}?text=${message}`, "_blank");
   };
 
   const handleReset = () => {
@@ -106,6 +164,44 @@ _Calculado por Solo Energia_`;
     <div className="w-full max-w-lg mx-auto space-y-6">
       {!result ? (
         <>
+          {/* Dados do Cliente */}
+          <Card className="shadow-card border-0">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <User className="h-4 w-4 text-solo-orange" />
+                Dados do Hóspede
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="nomeCliente" className="text-sm text-muted-foreground">
+                  Nome do cliente *
+                </Label>
+                <Input
+                  id="nomeCliente"
+                  type="text"
+                  placeholder="João Silva"
+                  value={nomeCliente}
+                  onChange={(e) => setNomeCliente(e.target.value)}
+                  className="bg-muted/50 border-0"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="telefoneCliente" className="text-sm text-muted-foreground">
+                  WhatsApp do cliente *
+                </Label>
+                <Input
+                  id="telefoneCliente"
+                  type="tel"
+                  placeholder="(11) 99999-9999"
+                  value={telefoneCliente}
+                  onChange={(e) => setTelefoneCliente(e.target.value)}
+                  className="bg-muted/50 border-0"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Período da Estadia */}
           <Card className="shadow-card border-0">
             <CardHeader className="pb-3">
@@ -144,41 +240,44 @@ _Calculado por Solo Energia_`;
             </CardContent>
           </Card>
 
-          {/* Leituras Enel */}
+          {/* Geração do Monitoramento */}
           <Card className="shadow-card border-0">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Zap className="h-4 w-4 text-solo-orange" />
-                Consumo da Rede (Código 03)
+                <Activity className="h-4 w-4 text-solo-yellow" />
+                Geração do Monitoramento
               </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Quanto o sistema solar realmente gerou (app do inversor)
+              </p>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="codigo03Entrada" className="text-sm text-muted-foreground">
+                  <Label htmlFor="geracaoMonitoramentoEntrada" className="text-sm text-muted-foreground">
                     Leitura entrada (kWh)
                   </Label>
                   <Input
-                    id="codigo03Entrada"
+                    id="geracaoMonitoramentoEntrada"
                     type="number"
                     step="0.1"
                     placeholder="0.0"
-                    value={codigo03Entrada}
-                    onChange={(e) => setCodigo03Entrada(e.target.value)}
+                    value={geracaoMonitoramentoEntrada}
+                    onChange={(e) => setGeracaoMonitoramentoEntrada(e.target.value)}
                     className="bg-muted/50 border-0"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="codigo03Saida" className="text-sm text-muted-foreground">
+                  <Label htmlFor="geracaoMonitoramentoSaida" className="text-sm text-muted-foreground">
                     Leitura saída (kWh)
                   </Label>
                   <Input
-                    id="codigo03Saida"
+                    id="geracaoMonitoramentoSaida"
                     type="number"
                     step="0.1"
                     placeholder="0.0"
-                    value={codigo03Saida}
-                    onChange={(e) => setCodigo03Saida(e.target.value)}
+                    value={geracaoMonitoramentoSaida}
+                    onChange={(e) => setGeracaoMonitoramentoSaida(e.target.value)}
                     className="bg-muted/50 border-0"
                   />
                 </div>
@@ -186,13 +285,16 @@ _Calculado por Solo Energia_`;
             </CardContent>
           </Card>
 
-          {/* Leituras Solar */}
+          {/* Injeção na Rede (Código 103) */}
           <Card className="shadow-card border-0">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <Sun className="h-4 w-4 text-solo-yellow" />
-                Geração Solar (Código 103)
+                Injeção na Rede (Código 103)
               </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Energia enviada para a rede (leitura do medidor Enel)
+              </p>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -228,18 +330,63 @@ _Calculado por Solo Energia_`;
             </CardContent>
           </Card>
 
-          {/* Tarifa */}
+          {/* Leituras Enel */}
+          <Card className="shadow-card border-0">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <Zap className="h-4 w-4 text-solo-orange" />
+                Consumo da Rede (Código 03)
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Energia consumida da distribuidora (leitura do medidor Enel)
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="codigo03Entrada" className="text-sm text-muted-foreground">
+                    Leitura entrada (kWh)
+                  </Label>
+                  <Input
+                    id="codigo03Entrada"
+                    type="number"
+                    step="0.1"
+                    placeholder="0.0"
+                    value={codigo03Entrada}
+                    onChange={(e) => setCodigo03Entrada(e.target.value)}
+                    className="bg-muted/50 border-0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="codigo03Saida" className="text-sm text-muted-foreground">
+                    Leitura saída (kWh)
+                  </Label>
+                  <Input
+                    id="codigo03Saida"
+                    type="number"
+                    step="0.1"
+                    placeholder="0.0"
+                    value={codigo03Saida}
+                    onChange={(e) => setCodigo03Saida(e.target.value)}
+                    className="bg-muted/50 border-0"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Tarifa e PIX */}
           <Card className="shadow-card border-0">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <DollarSign className="h-4 w-4 text-solo-orange" />
-                Tarifa
+                Tarifa e Pagamento
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="tarifa" className="text-sm text-muted-foreground">
-                  Valor por kWh (R$)
+                  Valor por kWh (R$) *
                 </Label>
                 <Input
                   id="tarifa"
@@ -248,6 +395,20 @@ _Calculado por Solo Energia_`;
                   value={tarifa}
                   onChange={(e) => setTarifa(e.target.value)}
                   className="bg-muted/50 border-0 max-w-[140px]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="chavePix" className="text-sm text-muted-foreground flex items-center gap-2">
+                  <CreditCard className="h-3 w-3" />
+                  Chave PIX (opcional)
+                </Label>
+                <Input
+                  id="chavePix"
+                  type="text"
+                  placeholder="email@exemplo.com ou CPF"
+                  value={chavePix}
+                  onChange={(e) => setChavePix(e.target.value)}
+                  className="bg-muted/50 border-0"
                 />
               </div>
             </CardContent>
@@ -268,7 +429,7 @@ _Calculado por Solo Energia_`;
             <div className="h-1 gradient-solar" />
             <CardHeader className="pb-2 pt-6">
               <CardTitle className="text-lg font-semibold text-center">
-                Resumo da Estadia
+                Resumo para {result.nomeCliente}
               </CardTitle>
               <p className="text-sm text-muted-foreground text-center">
                 {result.dataEntrada} → {result.dataSaida} ({result.diasEstadia} dias)
@@ -287,17 +448,30 @@ _Calculado por Solo Energia_`;
               <div className="bg-muted/50 rounded-xl p-4 space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground flex items-center gap-2">
-                    <Zap className="h-4 w-4" />
-                    Consumo da rede
+                    <Activity className="h-4 w-4" />
+                    Geração solar
                   </span>
-                  <span className="font-medium">{result.consumoRede.toFixed(1)} kWh</span>
+                  <span className="font-medium">{result.geracaoMonitoramento.toFixed(1)} kWh</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground flex items-center gap-2">
                     <Sun className="h-4 w-4" />
-                    Geração solar
+                    Injetado na rede
                   </span>
-                  <span className="font-medium">{result.geracaoSolar.toFixed(1)} kWh</span>
+                  <span className="font-medium">{result.injecaoRede.toFixed(1)} kWh</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground flex items-center gap-2">
+                    🏠 Autoconsumo solar
+                  </span>
+                  <span className="font-medium">{result.autoconsumo.toFixed(1)} kWh</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground flex items-center gap-2">
+                    <Zap className="h-4 w-4" />
+                    Consumo da rede
+                  </span>
+                  <span className="font-medium">{result.consumoRede.toFixed(1)} kWh</span>
                 </div>
                 <div className="h-px bg-border" />
                 <div className="flex justify-between items-center">
@@ -308,6 +482,18 @@ _Calculado por Solo Energia_`;
                   <span>Tarifa aplicada</span>
                   <span>R$ {result.tarifa.toFixed(2)}/kWh</span>
                 </div>
+                {result.chavePix && (
+                  <>
+                    <div className="h-px bg-border" />
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground flex items-center gap-2">
+                        <CreditCard className="h-4 w-4" />
+                        Chave PIX
+                      </span>
+                      <span className="font-medium text-right max-w-[180px] truncate">{result.chavePix}</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Ações */}
@@ -329,7 +515,7 @@ _Calculado por Solo Energia_`;
                   className="h-11 gap-2 bg-[#25D366] hover:bg-[#1da851] text-white"
                 >
                   <MessageCircle className="h-4 w-4" />
-                  WhatsApp
+                  Enviar WhatsApp
                 </Button>
               </div>
 
