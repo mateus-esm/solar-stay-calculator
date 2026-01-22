@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Home, MapPin, DollarSign, Loader2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { ArrowLeft, Home, MapPin, Sun, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function PropertyNew() {
@@ -17,7 +18,15 @@ export default function PropertyNew() {
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
-  const [tariff, setTariff] = useState("0.75");
+  
+  // Solar system fields
+  const [modulesCount, setModulesCount] = useState("");
+  const [modulesPower, setModulesPower] = useState("");
+  const [modulesBrand, setModulesBrand] = useState("");
+  const [inverterPower, setInverterPower] = useState("");
+  const [inverterBrand, setInverterBrand] = useState("");
+  const [isMicroinverter, setIsMicroinverter] = useState(false);
+  const [microinverterCount, setMicroinverterCount] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +49,13 @@ export default function PropertyNew() {
       address: address.trim() || null,
       city: city.trim() || null,
       state: state.trim() || null,
-      tariff: parseFloat(tariff.replace(",", ".")) || 0.75,
+      modules_count: modulesCount ? parseInt(modulesCount) : null,
+      modules_power: modulesPower ? parseFloat(modulesPower.replace(",", ".")) : null,
+      modules_brand: modulesBrand.trim() || null,
+      inverter_power: inverterPower ? parseFloat(inverterPower.replace(",", ".")) : null,
+      inverter_brand: inverterBrand.trim() || null,
+      is_microinverter: isMicroinverter,
+      microinverter_count: isMicroinverter && microinverterCount ? parseInt(microinverterCount) : null,
     } as any);
 
     if (error) {
@@ -137,28 +152,108 @@ export default function PropertyNew() {
             </CardContent>
           </Card>
 
-          {/* Tariff */}
+          {/* Solar System */}
           <Card className="shadow-card border-0">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-accent" />
-                Configuração de Tarifa
+                <Sun className="h-4 w-4 text-accent" />
+                Sistema Solar
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Label htmlFor="tariff">Valor por kWh (R$)</Label>
-                <Input
-                  id="tariff"
-                  placeholder="0.75"
-                  value={tariff}
-                  onChange={(e) => setTariff(e.target.value)}
-                  className="bg-muted/50 border-0 max-w-32"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Valor que será cobrado por kWh consumido
-                </p>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="modulesCount">Nº de Módulos</Label>
+                  <Input
+                    id="modulesCount"
+                    type="number"
+                    placeholder="12"
+                    value={modulesCount}
+                    onChange={(e) => setModulesCount(e.target.value)}
+                    className="bg-muted/50 border-0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="modulesPower">Potência (W)</Label>
+                  <Input
+                    id="modulesPower"
+                    placeholder="550"
+                    value={modulesPower}
+                    onChange={(e) => setModulesPower(e.target.value)}
+                    className="bg-muted/50 border-0"
+                  />
+                </div>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="modulesBrand">Marca dos Módulos</Label>
+                <Input
+                  id="modulesBrand"
+                  placeholder="Canadian Solar"
+                  value={modulesBrand}
+                  onChange={(e) => setModulesBrand(e.target.value)}
+                  className="bg-muted/50 border-0"
+                />
+              </div>
+
+              <div className="flex items-center justify-between py-2">
+                <Label htmlFor="isMicroinverter" className="cursor-pointer">
+                  Microinversor?
+                </Label>
+                <Switch
+                  id="isMicroinverter"
+                  checked={isMicroinverter}
+                  onCheckedChange={setIsMicroinverter}
+                />
+              </div>
+
+              {isMicroinverter ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="microinverterCount">Qtd. Micros</Label>
+                    <Input
+                      id="microinverterCount"
+                      type="number"
+                      placeholder="6"
+                      value={microinverterCount}
+                      onChange={(e) => setMicroinverterCount(e.target.value)}
+                      className="bg-muted/50 border-0"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="inverterBrand">Marca</Label>
+                    <Input
+                      id="inverterBrand"
+                      placeholder="Hoymiles"
+                      value={inverterBrand}
+                      onChange={(e) => setInverterBrand(e.target.value)}
+                      className="bg-muted/50 border-0"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="inverterPower">Potência Inversor (kW)</Label>
+                    <Input
+                      id="inverterPower"
+                      placeholder="5.0"
+                      value={inverterPower}
+                      onChange={(e) => setInverterPower(e.target.value)}
+                      className="bg-muted/50 border-0"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="inverterBrand">Marca Inversor</Label>
+                    <Input
+                      id="inverterBrand"
+                      placeholder="Growatt"
+                      value={inverterBrand}
+                      onChange={(e) => setInverterBrand(e.target.value)}
+                      className="bg-muted/50 border-0"
+                    />
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 

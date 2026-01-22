@@ -53,6 +53,13 @@ export type Database = {
           city: string | null
           created_at: string
           id: string
+          inverter_brand: string | null
+          inverter_power: number | null
+          is_microinverter: boolean | null
+          microinverter_count: number | null
+          modules_brand: string | null
+          modules_count: number | null
+          modules_power: number | null
           name: string
           owner_id: string
           state: string | null
@@ -64,6 +71,13 @@ export type Database = {
           city?: string | null
           created_at?: string
           id?: string
+          inverter_brand?: string | null
+          inverter_power?: number | null
+          is_microinverter?: boolean | null
+          microinverter_count?: number | null
+          modules_brand?: string | null
+          modules_count?: number | null
+          modules_power?: number | null
           name: string
           owner_id: string
           state?: string | null
@@ -75,6 +89,13 @@ export type Database = {
           city?: string | null
           created_at?: string
           id?: string
+          inverter_brand?: string | null
+          inverter_power?: number | null
+          is_microinverter?: boolean | null
+          microinverter_count?: number | null
+          modules_brand?: string | null
+          modules_count?: number | null
+          modules_power?: number | null
           name?: string
           owner_id?: string
           state?: string | null
