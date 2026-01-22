@@ -14,7 +14,8 @@ interface Property {
   address: string | null;
   city: string | null;
   state: string | null;
-  tariff: number;
+  modules_count: number | null;
+  modules_power: number | null;
   created_at: string;
 }
 
@@ -174,10 +175,15 @@ export default function Dashboard() {
                             </CardDescription>
                           )}
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm text-muted-foreground">Tarifa</p>
-                          <p className="font-semibold">R$ {Number(property.tariff).toFixed(2)}/kWh</p>
-                        </div>
+                        {property.modules_count && property.modules_power && (
+                          <div className="text-right">
+                            <p className="text-sm text-muted-foreground">Potência</p>
+                            <p className="font-semibold flex items-center gap-1">
+                              <Zap className="h-4 w-4 text-accent" />
+                              {((property.modules_count * property.modules_power) / 1000).toFixed(1)} kWp
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </CardHeader>
                     <CardContent>
