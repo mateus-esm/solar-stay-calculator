@@ -14,16 +14,232 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          phone: string | null
+          pix_key: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          pix_key?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          pix_key?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      properties: {
+        Row: {
+          address: string | null
+          city: string | null
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          state: string | null
+          tariff: number
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+          state?: string | null
+          tariff?: number
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          state?: string | null
+          tariff?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      property_access: {
+        Row: {
+          can_edit: boolean | null
+          created_at: string
+          id: string
+          property_id: string
+          user_id: string
+        }
+        Insert: {
+          can_edit?: boolean | null
+          created_at?: string
+          id?: string
+          property_id: string
+          user_id: string
+        }
+        Update: {
+          can_edit?: boolean | null
+          created_at?: string
+          id?: string
+          property_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_access_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stays: {
+        Row: {
+          amount_to_charge: number | null
+          check_in_date: string
+          check_out_date: string | null
+          codigo_03_entry: number | null
+          codigo_03_exit: number | null
+          codigo_103_entry: number | null
+          codigo_103_exit: number | null
+          created_at: string
+          grid_consumption: number | null
+          grid_injection: number | null
+          guest_name: string
+          guest_phone: string | null
+          id: string
+          is_paid: boolean | null
+          monitoring_entry: number | null
+          monitoring_exit: number | null
+          paid_at: string | null
+          payment_proof_url: string | null
+          property_id: string
+          self_consumption: number | null
+          solar_generation: number | null
+          status: string | null
+          tariff_used: number | null
+          total_consumption: number | null
+          updated_at: string
+        }
+        Insert: {
+          amount_to_charge?: number | null
+          check_in_date: string
+          check_out_date?: string | null
+          codigo_03_entry?: number | null
+          codigo_03_exit?: number | null
+          codigo_103_entry?: number | null
+          codigo_103_exit?: number | null
+          created_at?: string
+          grid_consumption?: number | null
+          grid_injection?: number | null
+          guest_name: string
+          guest_phone?: string | null
+          id?: string
+          is_paid?: boolean | null
+          monitoring_entry?: number | null
+          monitoring_exit?: number | null
+          paid_at?: string | null
+          payment_proof_url?: string | null
+          property_id: string
+          self_consumption?: number | null
+          solar_generation?: number | null
+          status?: string | null
+          tariff_used?: number | null
+          total_consumption?: number | null
+          updated_at?: string
+        }
+        Update: {
+          amount_to_charge?: number | null
+          check_in_date?: string
+          check_out_date?: string | null
+          codigo_03_entry?: number | null
+          codigo_03_exit?: number | null
+          codigo_103_entry?: number | null
+          codigo_103_exit?: number | null
+          created_at?: string
+          grid_consumption?: number | null
+          grid_injection?: number | null
+          guest_name?: string
+          guest_phone?: string | null
+          id?: string
+          is_paid?: boolean | null
+          monitoring_entry?: number | null
+          monitoring_exit?: number | null
+          paid_at?: string | null
+          payment_proof_url?: string | null
+          property_id?: string
+          self_consumption?: number | null
+          solar_generation?: number | null
+          status?: string | null
+          tariff_used?: number | null
+          total_consumption?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stays_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_property_access: {
+        Args: { _property_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "owner" | "viewer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +366,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["owner", "viewer"],
+    },
   },
 } as const
