@@ -10,8 +10,19 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { 
   ArrowLeft, Activity, Sun, Zap, DollarSign, Calendar, 
-  User, Check, Copy, MessageCircle, Upload, Loader2 
+  User, Check, Copy, MessageCircle, Upload, Loader2, Trash2 
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -63,6 +74,9 @@ export default function StayDetail() {
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
+
+  const [deleting, setDeleting] = useState(false);
+  const [proofSignedUrl, setProofSignedUrl] = useState<string | null>(null);
 
   // Entry readings form
   const [monitoringEntry, setMonitoringEntry] = useState("");
@@ -145,6 +159,19 @@ export default function StayDetail() {
       }
       if (stayTyped.codigo_103_exit) {
         setCodigo103Exit(stayTyped.codigo_103_exit.toString());
+      }
+
+      // Get signed URL for payment proof if exists
+      if (stayTyped.payment_proof_url) {
+        const { data: signedData } = await supabase.storage
+          .from("payment-proofs")
+          .createSignedUrl(stayTyped.payment_proof_url, 3600); // 1 hour
+        
+        if (signedData?.signedUrl) {
+          setProofSignedUrl(signedData.signedUrl);
+        }
+      } else {
+        setProofSignedUrl(null);
       }
     } catch (error) {
       console.error("Error fetching stay:", error);
@@ -281,13 +308,10 @@ export default function StayDetail() {
       return;
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from("payment-proofs")
-      .getPublicUrl(filePath);
-
+    // Store just the file path (not public URL since bucket is private)
     const { error: updateError } = await supabase
       .from("stays")
-      .update({ payment_proof_url: publicUrl } as any)
+      .update({ payment_proof_url: filePath } as any)
       .eq("id", id);
 
     if (updateError) {
@@ -298,6 +322,34 @@ export default function StayDetail() {
     }
 
     setUploading(false);
+  };
+
+  const handleDeleteStay = async () => {
+    if (!stay || !property) return;
+
+    setDeleting(true);
+
+    // Delete payment proof from storage if exists
+    if (stay.payment_proof_url) {
+      await supabase.storage
+        .from("payment-proofs")
+        .remove([stay.payment_proof_url]);
+    }
+
+    const { error } = await supabase
+      .from("stays")
+      .delete()
+      .eq("id", stay.id);
+
+    if (error) {
+      console.error("Error deleting stay:", error);
+      toast.error("Erro ao apagar reserva");
+    } else {
+      toast.success("Reserva apagada!");
+      navigate(`/properties/${property.id}`);
+    }
+
+    setDeleting(false);
   };
 
   const generateMessage = () => {
@@ -395,6 +447,31 @@ _Calculado por Solo Energia_`;
               Pago
             </Badge>
           )}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                <Trash2 className="h-5 w-5" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Apagar reserva?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta ação não pode ser desfeita. Isso irá apagar permanentemente a reserva de {stay.guest_name}.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteStay}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  disabled={deleting}
+                >
+                  {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apagar"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </header>
 
@@ -735,10 +812,10 @@ _Calculado por Solo Energia_`;
                 {/* Upload Proof */}
                 <div className="space-y-2">
                   <Label>Comprovante de pagamento</Label>
-                  {stay.payment_proof_url ? (
+                  {proofSignedUrl ? (
                     <div className="flex items-center gap-2">
                       <a 
-                        href={stay.payment_proof_url} 
+                        href={proofSignedUrl} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="text-sm text-accent underline"
