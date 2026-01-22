@@ -414,7 +414,7 @@ _Calculado por Solo Energia_`;
 
   if (!stay || !property) return null;
 
-  const isPendingEntry = stay.status === "pending_entry";
+  const isPendingEntry = stay.status === "pending" || stay.status === "pending_entry";
   const isInProgress = stay.status === "in_progress";
   const isCompleted = stay.status === "completed" || stay.status === "paid";
 
