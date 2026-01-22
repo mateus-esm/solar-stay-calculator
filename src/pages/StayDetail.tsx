@@ -50,6 +50,7 @@ interface Stay {
   is_paid: boolean;
   payment_proof_url: string | null;
   status: string;
+  pix_key: string | null;
 }
 
 interface Property {
@@ -59,17 +60,13 @@ interface Property {
   owner_id: string;
 }
 
-interface Profile {
-  pix_key: string | null;
-}
-
 export default function StayDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const [stay, setStay] = useState<Stay | null>(null);
   const [property, setProperty] = useState<Property | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  
   const [loadingData, setLoadingData] = useState(true);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -129,14 +126,6 @@ export default function StayDetail() {
       const propertyTyped = propertyData as Property;
       setProperty(propertyTyped);
 
-      // Fetch profile for PIX key
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("pix_key")
-        .eq("user_id", propertyTyped.owner_id)
-        .single();
-
-      setProfile(profileData as Profile | null);
 
       // Set form values if already filled
       if (stayTyped.monitoring_entry) {
@@ -380,11 +369,11 @@ Segue o resumo do consumo de energia da sua estadia:
 💰 Tarifa: R$ ${(stay.tariff_used || 0).toFixed(2)}/kWh
 💵 *Valor da energia: R$ ${stay.amount_to_charge.toFixed(2)}*`;
 
-    if (profile?.pix_key) {
+    if (stay.pix_key) {
       message += `
 
 💳 *Chave PIX para pagamento:*
-${profile.pix_key}`;
+${stay.pix_key}`;
     }
 
     message += `

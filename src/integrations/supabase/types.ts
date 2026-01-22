@@ -156,6 +156,7 @@ export type Database = {
           monitoring_exit: number | null
           paid_at: string | null
           payment_proof_url: string | null
+          pix_key: string | null
           property_id: string
           self_consumption: number | null
           solar_generation: number | null
@@ -183,6 +184,7 @@ export type Database = {
           monitoring_exit?: number | null
           paid_at?: string | null
           payment_proof_url?: string | null
+          pix_key?: string | null
           property_id: string
           self_consumption?: number | null
           solar_generation?: number | null
@@ -210,6 +212,7 @@ export type Database = {
           monitoring_exit?: number | null
           paid_at?: string | null
           payment_proof_url?: string | null
+          pix_key?: string | null
           property_id?: string
           self_consumption?: number | null
           solar_generation?: number | null
