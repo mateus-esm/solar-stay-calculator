@@ -106,7 +106,7 @@ export default function StayNew() {
         check_out_date: checkOutDate,
         tariff_used: parseFloat(tariff),
         pix_key: pixKey.trim() || null,
-        status: "pending_entry",
+        status: "in_progress",
       })
       .select()
       .single();
