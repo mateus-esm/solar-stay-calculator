@@ -64,6 +64,11 @@ export default function StayDetail() {
   const [copied, setCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
 
+  // Entry readings form
+  const [monitoringEntry, setMonitoringEntry] = useState("");
+  const [codigo03Entry, setCodigo03Entry] = useState("");
+  const [codigo103Entry, setCodigo103Entry] = useState("");
+
   // Exit readings form
   const [checkOutDate, setCheckOutDate] = useState("");
   const [monitoringExit, setMonitoringExit] = useState("");
@@ -119,7 +124,16 @@ export default function StayDetail() {
 
       setProfile(profileData as Profile | null);
 
-      // Set form values if already completed
+      // Set form values if already filled
+      if (stayTyped.monitoring_entry) {
+        setMonitoringEntry(stayTyped.monitoring_entry.toString());
+      }
+      if (stayTyped.codigo_03_entry) {
+        setCodigo03Entry(stayTyped.codigo_03_entry.toString());
+      }
+      if (stayTyped.codigo_103_entry) {
+        setCodigo103Entry(stayTyped.codigo_103_entry.toString());
+      }
       if (stayTyped.check_out_date) {
         setCheckOutDate(stayTyped.check_out_date);
       }
@@ -141,10 +155,41 @@ export default function StayDetail() {
     }
   };
 
+  const handleSaveEntryReadings = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!monitoringEntry || !codigo03Entry || !codigo103Entry) {
+      toast.error("Preencha todas as leituras de entrada");
+      return;
+    }
+
+    setSaving(true);
+
+    const { error } = await supabase
+      .from("stays")
+      .update({
+        monitoring_entry: parseFloat(monitoringEntry),
+        codigo_03_entry: parseFloat(codigo03Entry),
+        codigo_103_entry: parseFloat(codigo103Entry),
+        status: "in_progress",
+      } as any)
+      .eq("id", id);
+
+    if (error) {
+      console.error("Error saving entry readings:", error);
+      toast.error("Erro ao salvar leituras de entrada");
+    } else {
+      toast.success("Leituras de entrada registradas!");
+      fetchStayData();
+    }
+
+    setSaving(false);
+  };
+
   const handleCompleteStay = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!checkOutDate || !monitoringExit || !codigo03Exit || !codigo103Exit) {
+    if (!monitoringExit || !codigo03Exit || !codigo103Exit) {
       toast.error("Preencha todas as leituras de saída");
       return;
     }
@@ -172,7 +217,6 @@ export default function StayDetail() {
     const { error } = await supabase
       .from("stays")
       .update({
-        check_out_date: checkOutDate,
         monitoring_exit: monitoringExitVal,
         codigo_03_exit: codigo03ExitVal,
         codigo_103_exit: codigo103ExitVal,
@@ -329,6 +373,7 @@ _Calculado por Solo Energia_`;
 
   if (!stay || !property) return null;
 
+  const isPendingEntry = stay.status === "pending_entry";
   const isInProgress = stay.status === "in_progress";
   const isCompleted = stay.status === "completed" || stay.status === "paid";
 
@@ -355,60 +400,165 @@ _Calculado por Solo Energia_`;
 
       {/* Main Content */}
       <main className="container max-w-lg mx-auto px-4 py-6 pb-24">
-        {/* Entry Info */}
+        {/* Stay Info */}
         <Card className="shadow-card border-0 mb-6">
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Calendar className="h-4 w-4 text-accent" />
-              Entrada
+              Informações da Reserva
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-muted-foreground">Data:</span>{" "}
+                <span className="text-muted-foreground">Check-in:</span>{" "}
                 <span className="font-medium">
                   {format(parseISO(stay.check_in_date), "dd/MM/yyyy", { locale: ptBR })}
                 </span>
               </div>
               <div>
-                <span className="text-muted-foreground">Monitoramento:</span>{" "}
-                <span className="font-medium">{stay.monitoring_entry} kWh</span>
+                <span className="text-muted-foreground">Check-out:</span>{" "}
+                <span className="font-medium">
+                  {stay.check_out_date 
+                    ? format(parseISO(stay.check_out_date), "dd/MM/yyyy", { locale: ptBR })
+                    : "-"}
+                </span>
               </div>
               <div>
-                <span className="text-muted-foreground">Código 03:</span>{" "}
-                <span className="font-medium">{stay.codigo_03_entry} kWh</span>
+                <span className="text-muted-foreground">Tarifa:</span>{" "}
+                <span className="font-medium">R$ {(stay.tariff_used || 0).toFixed(2)}/kWh</span>
               </div>
-              <div>
-                <span className="text-muted-foreground">Código 103:</span>{" "}
-                <span className="font-medium">{stay.codigo_103_entry} kWh</span>
-              </div>
+              {stay.guest_phone && (
+                <div>
+                  <span className="text-muted-foreground">WhatsApp:</span>{" "}
+                  <span className="font-medium">{stay.guest_phone}</span>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Exit Form or Results */}
-        {isInProgress ? (
+        {/* Entry Readings Info (if already filled) */}
+        {!isPendingEntry && (
+          <Card className="shadow-card border-0 mb-6">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Activity className="h-4 w-4 text-accent" />
+                Leituras de Entrada
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Monitoramento:</span>{" "}
+                  <span className="font-medium">{stay.monitoring_entry} kWh</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Código 03:</span>{" "}
+                  <span className="font-medium">{stay.codigo_03_entry} kWh</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Código 103:</span>{" "}
+                  <span className="font-medium">{stay.codigo_103_entry} kWh</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Entry Readings Form */}
+        {isPendingEntry && (
+          <form onSubmit={handleSaveEntryReadings} className="space-y-6">
+            <Card className="shadow-card border-0">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-accent" />
+                  Registrar Leituras de Entrada
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Registre as leituras no momento do check-in
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="monitoringEntry" className="flex items-center gap-2">
+                    <Activity className="h-3 w-3" />
+                    Monitoramento Solar (kWh) *
+                  </Label>
+                  <Input
+                    id="monitoringEntry"
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={monitoringEntry}
+                    onChange={(e) => setMonitoringEntry(e.target.value)}
+                    className="bg-muted/50 border-0"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="codigo03Entry" className="flex items-center gap-2">
+                    <Zap className="h-3 w-3" />
+                    Código 03 - Consumo da Rede (kWh) *
+                  </Label>
+                  <Input
+                    id="codigo03Entry"
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={codigo03Entry}
+                    onChange={(e) => setCodigo03Entry(e.target.value)}
+                    className="bg-muted/50 border-0"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="codigo103Entry" className="flex items-center gap-2">
+                    <Sun className="h-3 w-3" />
+                    Código 103 - Injeção na Rede (kWh) *
+                  </Label>
+                  <Input
+                    id="codigo103Entry"
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={codigo103Entry}
+                    onChange={(e) => setCodigo103Entry(e.target.value)}
+                    className="bg-muted/50 border-0"
+                    required
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Button
+              type="submit"
+              className="w-full h-12 gradient-solar hover:opacity-90"
+              disabled={saving}
+            >
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Salvar Leituras de Entrada"
+              )}
+            </Button>
+          </form>
+        )}
+
+        {/* Exit Form */}
+        {isInProgress && (
           <form onSubmit={handleCompleteStay} className="space-y-6">
             <Card className="shadow-card border-0">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-accent" />
-                  Registrar Saída
+                  Registrar Leituras de Saída
                 </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Registre as leituras no momento do check-out
+                </p>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="checkOutDate">Data de saída *</Label>
-                  <Input
-                    id="checkOutDate"
-                    type="date"
-                    value={checkOutDate}
-                    onChange={(e) => setCheckOutDate(e.target.value)}
-                    className="bg-muted/50 border-0"
-                    required
-                  />
-                </div>
                 <div className="space-y-2">
                   <Label htmlFor="monitoringExit" className="flex items-center gap-2">
                     <Activity className="h-3 w-3" />
@@ -472,7 +622,9 @@ _Calculado por Solo Energia_`;
               )}
             </Button>
           </form>
-        ) : (
+        )}
+        {/* Results */}
+        {isCompleted && (
           <div className="space-y-6">
             {/* Results Card */}
             <Card className="shadow-solar border-0 overflow-hidden">

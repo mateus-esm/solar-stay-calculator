@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, User, Calendar, Activity, Sun, Zap, Loader2 } from "lucide-react";
+import { ArrowLeft, User, Calendar, DollarSign, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface Property {
@@ -26,9 +26,8 @@ export default function StayNew() {
   const [guestName, setGuestName] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
   const [checkInDate, setCheckInDate] = useState("");
-  const [monitoringEntry, setMonitoringEntry] = useState("");
-  const [codigo03Entry, setCodigo03Entry] = useState("");
-  const [codigo103Entry, setCodigo103Entry] = useState("");
+  const [checkOutDate, setCheckOutDate] = useState("");
+  const [tariff, setTariff] = useState("");
 
   useEffect(() => {
     if (!loading && !user) {
@@ -55,6 +54,7 @@ export default function StayNew() {
       return;
     }
     setProperty(data as Property);
+    setTariff(data.tariff?.toString() || "0.75");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -70,8 +70,13 @@ export default function StayNew() {
       return;
     }
 
-    if (!monitoringEntry || !codigo03Entry || !codigo103Entry) {
-      toast.error("Todas as leituras de entrada são obrigatórias");
+    if (!checkOutDate) {
+      toast.error("Data de saída é obrigatória");
+      return;
+    }
+
+    if (!tariff) {
+      toast.error("Tarifa é obrigatória");
       return;
     }
 
@@ -84,11 +89,9 @@ export default function StayNew() {
         guest_name: guestName.trim(),
         guest_phone: guestPhone.trim() || null,
         check_in_date: checkInDate,
-        monitoring_entry: parseFloat(monitoringEntry),
-        codigo_03_entry: parseFloat(codigo03Entry),
-        codigo_103_entry: parseFloat(codigo103Entry),
-        tariff_used: property?.tariff || 0.75,
-        status: "in_progress",
+        check_out_date: checkOutDate,
+        tariff_used: parseFloat(tariff),
+        status: "pending_entry",
       } as any)
       .select()
       .single();
@@ -97,7 +100,7 @@ export default function StayNew() {
       console.error("Error creating stay:", error);
       toast.error("Erro ao criar estadia");
     } else if (data) {
-      toast.success("Estadia registrada!");
+      toast.success("Reserva criada! Agora registre as leituras de entrada.");
       navigate(`/stays/${(data as any).id}`);
     }
 
@@ -164,17 +167,17 @@ export default function StayNew() {
             </CardContent>
           </Card>
 
-          {/* Check-in Date */}
+          {/* Dates */}
           <Card className="shadow-card border-0">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-accent" />
-                Data de Entrada
+                Período da Reserva
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="checkInDate">Data de check-in *</Label>
+                <Label htmlFor="checkInDate">Data de entrada *</Label>
                 <Input
                   id="checkInDate"
                   type="date"
@@ -184,65 +187,41 @@ export default function StayNew() {
                   required
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="checkOutDate">Data de saída *</Label>
+                <Input
+                  id="checkOutDate"
+                  type="date"
+                  value={checkOutDate}
+                  onChange={(e) => setCheckOutDate(e.target.value)}
+                  className="bg-muted/50 border-0"
+                  required
+                />
+              </div>
             </CardContent>
           </Card>
 
-          {/* Entry Readings */}
+          {/* Tariff */}
           <Card className="shadow-card border-0">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Activity className="h-4 w-4 text-accent" />
-                Leituras de Entrada
+                <DollarSign className="h-4 w-4 text-accent" />
+                Tarifa
               </CardTitle>
               <p className="text-xs text-muted-foreground">
-                Registre as leituras no momento do check-in
+                Valor por kWh para esta reserva
               </p>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent>
               <div className="space-y-2">
-                <Label htmlFor="monitoringEntry" className="flex items-center gap-2">
-                  <Activity className="h-3 w-3" />
-                  Monitoramento Solar (kWh) *
-                </Label>
+                <Label htmlFor="tariff">Tarifa (R$/kWh) *</Label>
                 <Input
-                  id="monitoringEntry"
+                  id="tariff"
                   type="number"
                   step="0.01"
-                  placeholder="0.00"
-                  value={monitoringEntry}
-                  onChange={(e) => setMonitoringEntry(e.target.value)}
-                  className="bg-muted/50 border-0"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="codigo03Entry" className="flex items-center gap-2">
-                  <Zap className="h-3 w-3" />
-                  Código 03 - Consumo da Rede (kWh) *
-                </Label>
-                <Input
-                  id="codigo03Entry"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={codigo03Entry}
-                  onChange={(e) => setCodigo03Entry(e.target.value)}
-                  className="bg-muted/50 border-0"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="codigo103Entry" className="flex items-center gap-2">
-                  <Sun className="h-3 w-3" />
-                  Código 103 - Injeção na Rede (kWh) *
-                </Label>
-                <Input
-                  id="codigo103Entry"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={codigo103Entry}
-                  onChange={(e) => setCodigo103Entry(e.target.value)}
+                  placeholder="0.75"
+                  value={tariff}
+                  onChange={(e) => setTariff(e.target.value)}
                   className="bg-muted/50 border-0"
                   required
                 />
@@ -259,7 +238,7 @@ export default function StayNew() {
             {saving ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              "Registrar Entrada"
+              "Criar Reserva"
             )}
           </Button>
         </form>
