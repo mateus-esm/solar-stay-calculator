@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, User, Calendar, DollarSign, Loader2 } from "lucide-react";
+import { ArrowLeft, User, Calendar, DollarSign, Loader2, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 
 interface Property {
@@ -28,6 +28,7 @@ export default function StayNew() {
   const [checkInDate, setCheckInDate] = useState("");
   const [checkOutDate, setCheckOutDate] = useState("");
   const [tariff, setTariff] = useState("");
+  const [pixKey, setPixKey] = useState("");
 
   useEffect(() => {
     if (!loading && !user) {
@@ -38,8 +39,21 @@ export default function StayNew() {
   useEffect(() => {
     if (user && propertyId) {
       fetchProperty();
+      fetchUserProfile();
     }
   }, [user, propertyId]);
+
+  const fetchUserProfile = async () => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("pix_key")
+      .eq("user_id", user?.id)
+      .single();
+
+    if (data?.pix_key) {
+      setPixKey(data.pix_key);
+    }
+  };
 
   const fetchProperty = async () => {
     const { data, error } = await supabase
@@ -91,8 +105,9 @@ export default function StayNew() {
         check_in_date: checkInDate,
         check_out_date: checkOutDate,
         tariff_used: parseFloat(tariff),
+        pix_key: pixKey.trim() || null,
         status: "pending_entry",
-      } as any)
+      })
       .select()
       .single();
 
@@ -201,18 +216,18 @@ export default function StayNew() {
             </CardContent>
           </Card>
 
-          {/* Tariff */}
+          {/* Tariff & PIX */}
           <Card className="shadow-card border-0">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <DollarSign className="h-4 w-4 text-accent" />
-                Tarifa
+                Cobrança
               </CardTitle>
               <p className="text-xs text-muted-foreground">
-                Valor por kWh para esta reserva
+                Tarifa e dados para pagamento
               </p>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="tariff">Tarifa (R$/kWh) *</Label>
                 <Input
@@ -225,6 +240,22 @@ export default function StayNew() {
                   className="bg-muted/50 border-0"
                   required
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pixKey" className="flex items-center gap-2">
+                  <CreditCard className="h-3.5 w-3.5" />
+                  Chave PIX
+                </Label>
+                <Input
+                  id="pixKey"
+                  placeholder="email@exemplo.com ou CPF/CNPJ"
+                  value={pixKey}
+                  onChange={(e) => setPixKey(e.target.value)}
+                  className="bg-muted/50 border-0"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Será enviada ao hóspede para pagamento
+                </p>
               </div>
             </CardContent>
           </Card>
