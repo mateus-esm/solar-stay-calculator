@@ -22,7 +22,7 @@ const Index = () => {
           <img 
             src={soloLogo} 
             alt="Solo Energia" 
-            className="h-8 object-contain"
+            className="h-12 object-contain"
           />
           <Button 
             onClick={() => navigate("/auth")}

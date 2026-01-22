@@ -107,7 +107,7 @@ export default function Auth() {
           <img 
             src={soloLogo} 
             alt="Solo Energia" 
-            className="h-12 mx-auto object-contain"
+            className="h-16 mx-auto object-contain"
           />
           <p className="text-muted-foreground text-sm">
             Gestão de energia para casas de temporada

@@ -112,7 +112,7 @@ export default function Dashboard() {
           <img 
             src={soloLogo} 
             alt="Solo Energia" 
-            className="h-8 object-contain"
+            className="h-12 object-contain"
           />
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
